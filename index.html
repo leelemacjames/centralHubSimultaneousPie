@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometric Algebra: The Physics of Intersection</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-evenly; 
+            padding: 20px;
+            overflow-x: hidden;
+            color: white;
+        }
+        
+        header {
+            text-align: center;
+            max-width: 800px;
+            padding-top: 10px;
+            z-index: 10;
+        }
+        
+        h1 {
+            color: #f8fafc;
+            font-size: clamp(1.8em, 5vw, 2.6em);
+            margin-bottom: 12px;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            font-weight: 300;
+        }
+        
+        .rationale {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(147, 197, 253, 0.2);
+            margin-bottom: 20px;
+            font-size: 1.05em;
+            line-height: 1.6;
+            color: #cbd5e1;
+            text-align: left;
+        }
+
+        .rationale b { color: #93c5fd; }
+        
+        .mindmap-container {
+            position: relative;
+            width: 88vmin; 
+            height: 88vmin;
+            max-width: 750px;
+            max-height: 750px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 40px rgba(0,0,0,0.6));
+        }
+        
+        .tooltip {
+            position: fixed;
+            background: rgba(15, 23, 42, 0.98);
+            color: white;
+            padding: 14px 22px;
+            border-radius: 10px;
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+            border: 1px solid rgba(147, 197, 253, 0.4);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+            max-width: 300px;
+        }
+        
+        .tooltip.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Geometric Algebra</h1>
+        <div class="rationale">
+            Algebraic solutions are <b>Geometric Intersections</b>. Solving \(ax + by = c\) is simply finding where two paths meet. 
+            The <b>x-axis</b> is the line where \(y=0\), and the <b>y-axis</b> is where \(x=0\). 
+            Finding "roots" is just finding the intersection with the horizontal boundary of the world.
+        </div>
+    </header>
+
+    <div class="mindmap-container">
+        <canvas id="mindmapCanvas"></canvas>
+        <div id="tooltip" class="tooltip"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mindmapCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        
+        const apps = [
+            { name: "Simultaneous Checker", url: "https://simultaneous-equations-check.vercel.app/", color: "#3b82f6", desc: "Utility for checking solutions to simultaneous equations." },
+            { name: "Geometric Mastery", url: "https://algebra-simultaneous-mastery.vercel.app/", color: "#2563eb", desc: "Linear algebra through LCM subtractions and geometric steps." },
+            { name: "Standard Form Lines", url: "https://simultaneous-equations-rouge.vercel.app/", color: "#1d4ed8", desc: "Exploring lines and intersections in ax + by = c form." },
+            { name: "Graph Q&A", url: "https://qa-simultaneous-algebra.vercel.app/", color: "#1e40af", desc: "Revealing algebraic solutions through their graphical counterparts." },
+            { name: "Hyperbola Intersects", url: "https://hyperbola-quadratic.vercel.app/", color: "#1e3a8a", desc: "Simultaneous hyperbola and linear graphs giving quadratic roots." },
+            { name: "Join Two Points", url: "https://leelemacjames.github.io/ax-by-c-join_points/", color: "#172554", desc: "Constructing a linear join ax + by = c between two coordinates." },
+            { name: "Line & Gradient", url: "https://leelemacjames.github.io/ax-by-c-line-and-dot/", color: "#1e40af", desc: "Mapping y = mx + c onto the standard form ax + by = c." },
+            { name: "Intersection Lab", url: "https://simultaneousequationgraphs.netlify.app/", color: "#3b82f6", desc: "Various apps exploring the physics of intersections." }
+        ];
+
+        let hoveredSlice = -1;
+        let hoveredCenter = false;
+
+        function initCanvas() {
+            const container = document.querySelector('.mindmap-container');
+            const size = Math.min(container.offsetWidth, container.offsetHeight);
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            ctx.scale(dpr, dpr);
+        }
+
+        function drawMindmap() {
+            const size = canvas.width / (window.devicePixelRatio || 1);
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const outerRadius = size * 0.42;
+            const innerRadius = size * 0.13; 
+            
+            ctx.clearRect(0, 0, size, size);
+            const sliceAngle = (Math.PI * 2) / apps.length;
+            
+            apps.forEach((app, i) => {
+                const angleMid = i * sliceAngle - Math.PI / 2 + sliceAngle / 2;
+                const startAngle = i * sliceAngle - Math.PI / 2;
+                const endAngle = startAngle + sliceAngle;
+                const isHovered = hoveredSlice === i;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                const currentRadius = isHovered ? outerRadius + 10 : outerRadius;
+                ctx.arc(centerX, centerY, currentRadius, startAngle, endAngle);
+                ctx.closePath();
+                
+                ctx.fillStyle = app.color;
+                ctx.globalAlpha = isHovered ? 1.0 : 0.8;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(angleMid);
+                
+                const normAngle = ((angleMid + Math.PI / 2) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2);
+                const isLeftSide = (normAngle > Math.PI && normAngle < Math.PI * 2);
+
+                ctx.fillStyle = "white";
+                const fontSize = Math.max(10, Math.floor(size / 54));
+                ctx.font = isHovered ? `bold ${fontSize + 1}px Segoe UI` : `${fontSize}px Segoe UI`;
+
+                if (isLeftSide) {
+                    ctx.rotate(Math.PI);
+                    ctx.textAlign = "left";
+                    ctx.fillText(app.name, -outerRadius + 18, fontSize / 3);
+                } else {
+                    ctx.textAlign = "right";
+                    ctx.fillText(app.name, outerRadius - 18, fontSize / 3);
+                }
+                ctx.restore();
+            });
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+            ctx.fillStyle = hoveredCenter ? '#ffffff' : '#0f172a';
+            ctx.fill();
+            ctx.strokeStyle = '#93c5fd';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.fillStyle = hoveredCenter ? '#1e3a8a' : '#93c5fd';
+            ctx.textAlign = 'center';
+            const centerFontSize = Math.max(11, Math.floor(size / 50));
+            ctx.font = `bold ${centerFontSize}px Segoe UI`;
+            ctx.fillText('LINEAR', centerX, centerY - (centerFontSize / 6));
+            ctx.font = `${centerFontSize * 0.8}px Segoe UI`;
+            ctx.fillText('ALGEBRA', centerX, centerY + (centerFontSize * 0.85));
+        }
+
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (evt.clientX - rect.left) * (canvas.width / (window.devicePixelRatio || 1) / rect.width),
+                y: (evt.clientY - rect.top) * (canvas.height / (window.devicePixelRatio || 1) / rect.height)
+            };
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+            const size = canvas.width / (window.devicePixelRatio || 1);
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const dx = pos.x - centerX;
+            const dy = pos.y - centerY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const innerRadius = size * 0.13;
+            const outerRadius = size * 0.42;
+
+            if (dist < innerRadius) {
+                hoveredCenter = true; hoveredSlice = -1;
+                tooltip.classList.remove('show');
+                canvas.style.cursor = 'pointer';
+            } else if (dist < outerRadius + 10) {
+                hoveredCenter = false;
+                let angle = Math.atan2(dy, dx) + Math.PI / 2;
+                if (angle < 0) angle += Math.PI * 2;
+                hoveredSlice = Math.floor(angle / ((Math.PI * 2) / apps.length));
+                const app = apps[hoveredSlice];
+                tooltip.innerHTML = `<strong>${app.name}</strong><br>${app.desc}`;
+                tooltip.style.left = (e.clientX + 20) + 'px';
+                tooltip.style.top = (e.clientY + 20) + 'px';
+                tooltip.classList.add('show');
+                canvas.style.cursor = 'pointer';
+            } else {
+                hoveredSlice = -1; hoveredCenter = false;
+                tooltip.classList.remove('show');
+                canvas.style.cursor = 'default';
+            }
+            drawMindmap();
+        });
+
+        canvas.addEventListener('click', () => {
+            if (hoveredSlice !== -1) window.open(apps[hoveredSlice].url, '_blank');
+            else if (hoveredCenter) window.open('https://leelemacjames.github.io/thematicPhysics/', '_blank');
+        });
+
+        window.addEventListener('resize', () => { initCanvas(); drawMindmap(); });
+        initCanvas();
+        drawMindmap();
+    </script>
+</body>
+</html>
